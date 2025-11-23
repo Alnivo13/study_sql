@@ -1127,5 +1127,127 @@ ORDER BY avg_order_size
 Мы сознательно исключаем из результата пользователей с небольшим числом заказов: например, пользователь мог оформить всего один заказ и затем отменить его — в итоге для него cancel_rate составит 100%, но это не совсем то, что нас интересует.
 
 Помните, что для получения корректного результата деления нужно хотя бы одно из значений привести к типу DECIMAL.
+SELECT user_id,
+       round(count(distinct order_id) filter (WHERE action = 'cancel_order')::decimal / count(distinct order_id),
+             2) as cancel_rate,
+       count(distinct order_id) as orders_count
+FROM   user_actions
+GROUP BY user_id having round(count(distinct order_id) filter (
+WHERE  action = 'cancel_order')::decimal / count(distinct order_id), 2) >= 0.5
+   and count(distinct order_id) > 3
+ORDER BY user_id
+
+19. Для каждого дня недели в таблице user_actions посчитайте:
+
+Общее количество оформленных заказов.
+Общее количество отменённых заказов.
+Общее количество неотменённых заказов (т.е. доставленных).
+Долю неотменённых заказов в общем числе заказов (success rate).
+Новые колонки назовите соответственно created_orders, canceled_orders, actual_orders и success_rate. Колонку с долей неотменённых заказов округлите до трёх знаков после запятой.
+
+Все расчёты проводите за период с 24 августа по 6 сентября 2022 года включительно, чтобы во временной интервал попало равное количество разных дней недели.
+
+Группы сформируйте следующим образом: выделите день недели из даты с помощью функции to_char с параметром 'Dy', также выделите порядковый номер дня недели с помощью функции DATE_PART с параметром 'isodow'. Далее сгруппируйте данные по двум полям и проведите все необходимые расчёты.
+
+В результате должна получиться группировка по двум колонкам: с порядковым номером дней недели и их сокращёнными наименованиями.
+
+Результат отсортируйте по возрастанию порядкового номера дня недели.
+
+Поля в результирующей таблице: weekday_number, weekday, created_orders, canceled_orders, actual_orders, success_rate
+
+Пояснение:
+
+В целях упрощения расчётов в рамках этой задачи полагаем, что отмена заказа всегда происходит практически сразу после его создания, т.е. в тот же день. Случаями, когда заказ создаётся незадолго до полуночи, а отмена выпадает на следующий день, мы пренебрегаем.
+
+Номер дня недели мы дополнительно выделяем для того, чтобы вывести наименования дней недели и одновременно отсортировать все записи в соответствии с их порядком.
+
+Помните, что при расчёте относительных показателей для получения корректного результата деления нужно хотя бы одно из значений привести к типу DECIMAL.
+
+SELECT date_part('isodow', time)::int as weekday_number,
+       to_char(time, 'Dy') as weekday,
+       count(order_id) filter (WHERE action = 'create_order') as created_orders,
+       count(order_id) filter (WHERE action = 'cancel_order') as canceled_orders,
+       count(order_id) filter (WHERE action = 'create_order') - count(order_id) filter (WHERE action = 'cancel_order') as actual_orders,
+       round((count(order_id) filter (WHERE action = 'create_order') - count(order_id) filter (WHERE action = 'cancel_order'))::decimal / count(order_id) filter (WHERE action = 'create_order'),
+             3) as success_rate
+FROM   user_actions
+WHERE  time >= '2022-08-24'
+   and time < '2022-09-07'
+GROUP BY weekday_number, weekday
+ORDER BY weekday_number
+
+ПОДЗАПРОСЫ
+1. Используя данные из таблицы user_actions, рассчитайте среднее число заказов всех пользователей нашего сервиса.
+
+Для этого сначала в подзапросе посчитайте, сколько заказов сделал каждый пользователь, а затем обратитесь к результату подзапроса в блоке FROM и уже в основном запросе усредните количество заказов по всем пользователям.
+
+Полученное среднее число заказов всех пользователей округлите до двух знаков после запятой. Колонку с этим значением назовите orders_avg.
+
+Поле в результирующей таблице: orders_avg
+SELECT round(avg(orders_count), 2) as orders_avg
+FROM   (SELECT user_id,
+               count(order_id) as orders_count
+        FROM   user_actions
+        WHERE  action = 'create_order'
+        GROUP BY user_id) as t1
+
+2. Задание:
+
+Повторите запрос из предыдущего задания, но теперь вместо подзапроса используйте оператор WITH и табличное выражение.
+
+Условия задачи те же: используя данные из таблицы user_actions, рассчитайте среднее число заказов всех пользователей.
+
+Полученное среднее число заказов округлите до двух знаков после запятой. Колонку с этим значением назовите orders_avg.
+
+Поле в результирующей таблице: orders_avg
+
+with t1 as (SELECT user_id,
+                   count(order_id) as orders_count
+            FROM   user_actions
+            WHERE  action = 'create_order'
+            GROUP BY user_id)
+SELECT round(avg(orders_count), 2) as orders_avg
+FROM   t1
 
 
+3.Задание:
+
+Выведите из таблицы products информацию о всех товарах кроме самого дешёвого.
+
+Результат отсортируйте по убыванию id товара.
+
+Поля в результирующей таблице: product_id, name, price
+
+SELECT product_id,
+       name,
+       price
+FROM   products
+WHERE  price != (SELECT min(price)
+                 FROM   products)
+ORDER BY product_id desc
+
+4.Задание:
+
+Выведите информацию о товарах в таблице products, цена на которые превышает среднюю цену всех товаров на 20 рублей и более. Результат отсортируйте по убыванию id товара.
+
+Поля в результирующей таблице: product_id, name, price
+
+SELECT product_id,
+       name,
+       price
+FROM   products
+WHERE  price >= (SELECT avg(price)
+                 FROM   products) + 20
+ORDER BY product_id desc
+
+5. Посчитайте количество уникальных клиентов в таблице user_actions, сделавших за последнюю неделю хотя бы один заказ.
+
+Полученную колонку с числом клиентов назовите users_count. В качестве текущей даты, от которой откладывать неделю, используйте последнюю дату в той же таблице user_actions.
+
+Поле в результирующей таблице: users_count
+SELECT count(distinct user_id) as users_count
+FROM   user_actions
+WHERE  action = 'create_order'
+   and time between (SELECT max(time)
+                  FROM   user_actions) - interval '1 week' and (SELECT max(time)
+                                              FROM   user_actions)
