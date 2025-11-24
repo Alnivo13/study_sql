@@ -1251,3 +1251,98 @@ WHERE  action = 'create_order'
    and time between (SELECT max(time)
                   FROM   user_actions) - interval '1 week' and (SELECT max(time)
                                               FROM   user_actions)
+6.Задание:
+
+С помощью функции AGE и агрегирующей функции снова определите возраст самого молодого курьера мужского пола в таблице couriers, но в этот раз при расчётах в качестве первой даты используйте последнюю дату из таблицы courier_actions.
+
+Чтобы получить именно дату, перед применением функции AGE переведите последнюю дату из таблицы courier_actions в формат DATE, как мы делали в этом задании.
+
+Возраст курьера измерьте количеством лет, месяцев и дней и переведите его в тип VARCHAR. Полученную колонку со значением возраста назовите min_age.
+
+Поле в результирующей таблице: min_age
+
+Пояснение:
+
+В этой задаче результат подзапроса выступает в качестве аргумента функции. Чтобы весь запрос выглядел компактнее, для приведения данных к другому типу можно использовать формат записи с двумя двоеточиями — ::.
+
+Также обратите внимание, что для получения необходимого результата мы обращаемся к разным таблицам в рамках одного общего запроса.
+
+SELECT min(age((SELECT max(time)::date
+                FROM   courier_actions), birth_date))::varchar as min_age
+FROM   couriers
+WHERE  sex = 'male'
+7.Задание:
+
+Из таблицы user_actions с помощью подзапроса или табличного выражения отберите все заказы, которые не были отменены пользователями.
+
+Выведите колонку с id этих заказов. Результат запроса отсортируйте по возрастанию id заказа.
+
+Добавьте в запрос оператор LIMIT и выведите только первые 1000 строк результирующей таблицы.
+
+Поле в результирующей таблице: order_id
+
+SELECT order_id 
+FROM user_actions 
+WHERE order_id NOT IN (SELECT order_id FROM user_actions WHERE action = 'cancel_order') 
+ORDER BY order_id LIMIT 1000;
+
+Решение 2: 
+with t1 as (SELECT order_id
+            FROM   user_actions
+            WHERE  action = 'cancel_order')
+SELECT order_id
+FROM   user_actions
+WHERE  order_id not in (SELECT*
+                        FROM   t1)
+ORDER BY order_id limit 1000;
+
+
+
+8.Задание:
+
+Используя данные из таблицы user_actions, рассчитайте, сколько заказов сделал каждый пользователь и отразите это в столбце orders_count.
+
+В отдельном столбце orders_avg напротив каждого пользователя укажите среднее число заказов всех пользователей, округлив его до двух знаков после запятой.
+
+Также для каждого пользователя посчитайте отклонение числа заказов от среднего значения. Отклонение считайте так: число заказов «минус» округлённое среднее значение. Колонку с отклонением назовите orders_diff.
+
+Результат отсортируйте по возрастанию id пользователя. Добавьте в запрос оператор LIMIT и выведите только первые 1000 строк результирующей таблицы.
+
+Поля в результирующей таблице: user_id, orders_count, orders_avg, orders_diff
+
+
+Решение 1
+with t1 as (SELECT user_id,
+                   count(order_id) as orders_count
+            FROM   user_actions
+            WHERE  action = 'create_order'
+            GROUP BY user_id)
+SELECT user_id,
+       count(order_id) filter (WHERE action = 'create_order') as orders_count,
+       (SELECT round(avg(orders_count), 2) as orders_avg
+ FROM   t1), count(order_id) filter (
+WHERE  action = 'create_order') - (SELECT round(avg(orders_count), 2) as orders_avg
+                                   FROM   t1) as orders_diff
+FROM   user_actions
+GROUP BY user_id
+ORDER BY user_id limit 1000
+
+Решение 2 
+
+with t1 as (SELECT user_id,
+                   count(order_id) as orders_count
+            FROM   user_actions
+            WHERE  action = 'create_order'
+            GROUP BY user_id)
+SELECT user_id,
+       orders_count,
+       round((SELECT avg(orders_count)
+       FROM   t1), 2) as orders_avg, orders_count - round((SELECT avg(orders_count)
+                                                    FROM   t1), 2) as orders_diff
+FROM   t1
+ORDER BY user_id limit 1000
+
+Пояснение:
+
+В этой задаче можно использовать подзапрос, написанный в первых заданиях этого урока. Чтобы не пришлось дважды писать один и тот же подзапрос, можно использовать оператор WITH.
+
