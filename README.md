@@ -1346,3 +1346,56 @@ ORDER BY user_id limit 1000
 
 В этой задаче можно использовать подзапрос, написанный в первых заданиях этого урока. Чтобы не пришлось дважды писать один и тот же подзапрос, можно использовать оператор WITH.
 
+
+9. Задание:
+
+Назначьте скидку 15% на товары, цена которых превышает среднюю цену на все товары на 50 и более рублей, а также скидку 10% на товары, цена которых ниже средней на 50 и более рублей. Цену остальных товаров внутри диапазона (среднее - 50; среднее + 50) оставьте без изменений. При расчёте средней цены, округлите её до двух знаков после запятой.
+
+Выведите информацию о всех товарах с указанием старой и новой цены. Колонку с новой ценой назовите new_price.
+
+Результат отсортируйте сначала по убыванию прежней цены в колонке price, затем по возрастанию id товара.
+
+Поля в результирующей таблице: product_id, name, price, new_price
+Решение 1. 
+with t1 as (SELECT price
+            FROM   products
+            WHERE  price >= (SELECT round(avg(price), 2)
+                             FROM   products) + 50), t2 as (SELECT price
+                               FROM   products
+                               WHERE  price <= (SELECT round(avg(price), 2)
+                                                FROM   products) - 50)
+SELECT product_id,
+       name,
+       price,
+       case when price in (SELECT price
+                    FROM   t1) then price - price*0.15 when price in (SELECT price
+                                                  FROM   t2) then price - price*0.10 else price end as new_price
+FROM   products
+ORDER BY price desc, product_id
+
+Решение 2. 
+
+with avg_price as (SELECT round(avg(price), 2) as price
+                   FROM   products)
+SELECT product_id,
+       name,
+       price,
+       case 
+       when price >= (SELECT * FROM   avg_price) + 50 then price*0.85 
+       when price <= (SELECT * FROM   avg_price) - 50 then price*0.9 
+       else price 
+       end as new_price
+FROM   products
+ORDER BY price desc, product_id
+
+10. Выясните, есть ли в таблице courier_actions такие заказы, которые были приняты курьерами, но не были созданы пользователями. Посчитайте количество таких заказов.
+
+Колонку с числом заказов назовите orders_count.
+
+Поле в результирующей таблице: orders_count
+
+SELECT count(distinct order_id) as orders_count
+FROM   courier_actions
+WHERE  action = 'accept_order'
+   and order_id not in (SELECT order_id
+                     FROM   user_actions)
