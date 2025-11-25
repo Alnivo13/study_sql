@@ -1399,3 +1399,119 @@ FROM   courier_actions
 WHERE  action = 'accept_order'
    and order_id not in (SELECT order_id
                      FROM   user_actions)
+11. Задание:
+
+Выясните, есть ли в таблице user_actions такие заказы, которые были приняты курьерами, но не были доставлены пользователям: у заказа нет записи с действием 'deliver_order' в таблице courier_actions. Посчитайте уникальное количество таких заказов: используйте count(distinct order_id).
+
+Колонку с числом заказов назовите orders_count.
+
+Поле в результирующей таблице: orders_count
+
+SELECT count(distinct order_id) as orders_count
+FROM   user_actions
+WHERE  order_id not in (SELECT order_id
+                        FROM   courier_actions
+                        WHERE  action = 'deliver_order')
+12. Задание:
+
+Определите количество отменённых заказов в таблице courier_actions и выясните, есть ли в этой таблице такие заказы, которые были отменены пользователями, но при этом всё равно были доставлены. Посчитайте количество таких заказов.
+
+Колонку с отменёнными заказами назовите orders_canceled. Колонку с отменёнными, но доставленными заказами назовите orders_canceled_and_delivered. 
+
+Поля в результирующей таблице: orders_canceled, orders_canceled_and_delivered
+
+Пояснение:
+
+Для решения задачи пригодится оператор FILTER, который мы рассматривали в этом уроке.
+SELECT count(distinct order_id) as orders_canceled,
+       count(order_id) filter (WHERE action = 'deliver_order') as orders_canceled_and_delivered
+FROM   courier_actions
+WHERE  order_id in (SELECT order_id
+                    FROM   user_actions
+                    WHERE  action = 'cancel_order')
+13. Задание:
+
+По таблицам courier_actions и user_actions снова определите число недоставленных заказов и среди них посчитайте количество отменённых заказов и количество заказов, которые не были отменены (и соответственно, пока ещё не были доставлены).
+
+Колонку с недоставленными заказами назовите orders_undelivered, колонку с отменёнными заказами назовите orders_canceled, колонку с заказами «в пути» назовите orders_in_process.
+
+Поля в результирующей таблице: orders_undelivered, orders_canceled, orders_in_process
+
+Пояснение:
+
+Для решения задачи пригодится оператор FILTER, который мы рассматривали в этом уроке.
+SELECT count(distinct order_id) as orders_undelivered,
+       count(order_id) filter (WHERE action = 'cancel_order') as orders_canceled,
+       count(distinct order_id) - count(order_id) filter (WHERE action = 'cancel_order') as orders_in_process
+FROM   user_actions
+WHERE  order_id in (SELECT order_id
+                    FROM   courier_actions
+                    WHERE  order_id not in (SELECT order_id
+                                            FROM   courier_actions
+                                            WHERE  action = 'deliver_order'))
+14.Задание:
+
+Отберите из таблицы users пользователей мужского пола, которые старше всех пользователей женского пола.
+
+Выведите две колонки: id пользователя и дату рождения. Результат отсортируйте по возрастанию id пользователя.
+
+Поля в результирующей таблице: user_id, birth_date
+
+SELECT user_id,
+       birth_date
+FROM   users
+WHERE  sex = 'male'
+   and birth_date < (SELECT min(birth_date)
+                  FROM   users
+                  WHERE  sex = 'female')
+ORDER BY user_id
+
+Задание:
+
+Выведите id и содержимое 100 последних доставленных заказов из таблицы orders.
+
+Содержимым заказов считаются списки с id входящих в заказ товаров. Результат отсортируйте по возрастанию id заказа.
+
+Поля в результирующей таблице: order_id, product_ids
+
+SELECT order_id,
+       product_ids
+FROM   orders
+WHERE  order_id in (SELECT order_id
+                    FROM   courier_actions
+                    WHERE  action = 'deliver_order'
+                    ORDER BY time desc limit 100)
+ORDER BY order_id
+
+16. Задание:
+
+Из таблицы couriers выведите всю информацию о курьерах, которые в сентябре 2022 года доставили 30 и более заказов. Результат отсортируйте по возрастанию id курьера.
+
+Поля в результирующей таблице: courier_id, birth_date, sex
+
+Пояснение:
+
+Обратите внимание, что информация о курьерах находится в таблице couriers, а информация о действиях с заказами — в таблице courier_actions.
+Решение 1 
+with t1 as (SELECT courier_id
+            FROM   courier_actions
+            WHERE  action = 'deliver_order'
+               and date_part('month', time) = 9
+               and date_part('year', time) = 2022
+            GROUP BY courier_id having count(action) >= 30)
+SELECT *
+FROM   couriers
+WHERE  courier_id in (SELECT *
+                      FROM   t1)
+решение 2
+SELECT courier_id,
+       birth_date,
+       sex
+FROM   couriers
+WHERE  courier_id in (SELECT courier_id
+                      FROM   courier_actions
+                      WHERE  date_part('month', time) = 9
+                         and date_part('year', time) = 2022
+                         and action = 'deliver_order'
+                      GROUP BY courier_id having count(distinct order_id) >= 30)
+ORDER BY courier_id
