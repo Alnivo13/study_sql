@@ -1654,3 +1654,73 @@ FROM   unnest
 WHERE  product_id in (SELECT product_id
                       FROM   top_products)
 ORDER BY order_id
+
+JOIN
+
+1. Задание:
+
+Объедините таблицы user_actions и users по ключу user_id. В результат включите две колонки с user_id из обеих таблиц. Эти две колонки назовите соответственно user_id_left и user_id_right. Также в результат включите колонки order_id, time, action, sex, birth_date. Отсортируйте получившуюся таблицу по возрастанию id пользователя (в любой из двух колонок с id).
+
+Поля в результирующей таблице: user_id_left, user_id_right,  order_id, time, action, sex, birth_date
+
+Пояснение:
+
+Обратите внимание, что в результате объединения колонки с ключами (в нашем случае это user_id) не превращаются в одну общую колонку, а вместе добавляются в результирующую таблицу. То есть сколько было суммарно колонок в двух таблицах, столько окажется и в результирующей таблице после объединения. А уже далее в операторе SELECT можно выбирать нужные и проводить над ними операции.
+
+Чтобы обратиться к колонкам с одинаковым именем (user_id), пришедшим из разных таблиц, назначьте таблицам алиасы и обратитесь к колонкам через них. Пример, как это можно сделать:
+
+SELECT A.id as id_a, 
+       B.id as id_b, 
+       ...
+FROM table_A as A
+     JOIN table_B as B
+     ON A.id = B.id
+...
+
+
+После того как решите задачу, обратите внимание на колонки с user_id. Все ли значения в них попарно совпадают?
+SELECT user_actions.user_id as user_id_left,users.user_id as user_id_right, order_id, time, action, sex, birth_date
+FROM user_actions 
+INNER JOIN  users
+ON user_actions.user_id = users.user_id
+order by user_actions.user_id
+
+SELECT a.user_id as user_id_left,
+       b.user_id as user_id_right,
+       order_id,
+       time,
+       action,
+       sex,
+       birth_date
+FROM   user_actions a join users b using (user_id)
+ORDER BY user_id_left
+
+Задача 2. INNER JOIN
+Задание:
+
+А теперь попробуйте немного переписать запрос из прошлого задания и посчитать количество уникальных id в объединённой таблице. То есть снова объедините таблицы, но в этот раз просто посчитайте уникальные user_id в одной из колонок с id. Выведите это количество в качестве результата. Колонку с посчитанным значением назовите users_count.
+
+Поле в результирующей таблице: users_count
+
+После того как решите задачу, сравните полученное значение с количеством уникальных пользователей в таблицах users и user_actions, которое мы посчитали на прошлом шаге. С каким значением оно совпадает?
+аше решение:
+
+SELECT count(distinct user_id_left) as users_count
+FROM   (SELECT user_actions.user_id as user_id_left,
+               users.user_id as user_id_right,
+               order_id,
+               time,
+               action,
+               sex,
+               birth_date
+        FROM   user_actions
+            INNER JOIN users
+                ON user_actions.user_id = users.user_id
+        ORDER BY user_actions.user_id) t1
+
+
+Вариант верного решения:
+
+SELECT count(distinct a.user_id) as users_count
+FROM   user_actions a join users b using (user_id)
+
