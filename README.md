@@ -1724,3 +1724,49 @@ FROM   (SELECT user_actions.user_id as user_id_left,
 SELECT count(distinct a.user_id) as users_count
 FROM   user_actions a join users b using (user_id)
 
+3.Задание:
+
+С помощью LEFT JOIN объедините таблицы user_actions и users по ключу user_id. Обратите внимание на порядок таблиц — слева user_actions, справа users. В результат включите две колонки с user_id из обеих таблиц. Эти две колонки назовите соответственно user_id_left и user_id_right. Также в результат включите колонки order_id, time, action, sex, birth_date. Отсортируйте получившуюся таблицу по возрастанию id пользователя (в колонке из левой таблицы).
+
+Поля в результирующей таблице: user_id_left, user_id_right,  order_id, time, action, sex, birth_date
+
+После того как решите задачу, обратите внимание на колонки с user_id. Нет ли в какой-то из них пропущенных значений?
+
+SELECT a.user_id as user_id_left,
+       b.user_id as user_id_right,
+       order_id,
+       time,
+       action,
+       sex,
+       birth_date
+FROM   user_actions as a
+    LEFT JOIN users as b
+        ON a.user_id = b.user_id
+ORDER BY a.user_id
+
+
+Вариант верного решения:
+
+SELECT a.user_id as user_id_left,
+       b.user_id as user_id_right,
+       order_id,
+       time,
+       action,
+       sex,
+       birth_date
+FROM   user_actions a
+    LEFT JOIN users b using (user_id)
+ORDER BY user_id_left
+
+
+Задача 4. LEFT JOIN
+Задание:
+
+Теперь снова попробуйте немного переписать запрос из прошлого задания и посчитайте количество уникальных id в колонке user_id, пришедшей из левой таблицы user_actions. Выведите это количество в качестве результата. Колонку с посчитанным значением назовите users_count.
+
+Поле в результирующей таблице: users_count
+
+После того как решите задачу, сравните полученное значение с количеством уникальных пользователей в таблицах users и user_actions. С каким значением оно совпало в этот раз?
+
+SELECT count(distinct a.user_id) as users_count
+FROM   user_actions a left join users b using (user_id)
