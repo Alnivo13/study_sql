@@ -1819,4 +1819,45 @@ GROUP BY birth_date) b
 on a.birth_date = b.birth_date
 order by users_birth_date, couriers_birth_date
 
-    
+7. Задача:
+
+Объедините два следующих запроса друг с другом так, чтобы на выходе получился набор уникальных дат из таблиц users и couriers:
+
+SELECT birth_date
+FROM users
+WHERE birth_date IS NOT NULL
+
+
+SELECT birth_date
+FROM couriers
+WHERE birth_date IS NOT NULL
+
+
+Поместите в подзапрос полученный после объединения набор дат и посчитайте их количество. Колонку с числом дат назовите dates_count.
+
+Поле в результирующей таблице: dates_count
+
+После того как решите задачу, сравните полученное число дат с количеством строк в таблице, которую мы получили в прошлом задании. Совпали ли эти значения?
+
+Ваше решение:
+
+SELECT count(birth_date) as dates_count
+FROM   (SELECT birth_date
+        FROM   users
+        WHERE  birth_date is not null
+        UNION
+SELECT birth_date
+        FROM   couriers
+        WHERE  birth_date is not null) t1
+
+
+Вариант верного решения:
+
+SELECT count(birth_date) as dates_count
+FROM   (SELECT birth_date
+        FROM   users
+        WHERE  birth_date is not null
+        UNION
+SELECT birth_date
+        FROM   couriers
+        WHERE  birth_date is not null) t
