@@ -1861,3 +1861,27 @@ FROM   (SELECT birth_date
 SELECT birth_date
         FROM   couriers
         WHERE  birth_date is not null) t
+Задание:
+
+Из таблицы users отберите id первых 100 пользователей (просто выберите первые 100 записей, используя простой LIMIT) и с помощью CROSS JOIN объедините их со всеми наименованиями товаров из таблицы products. Выведите две колонки — id пользователя и наименование товара. Результат отсортируйте сначала по возрастанию id пользователя, затем по имени товара — тоже по возрастанию.
+
+Поля в результирующей таблице: user_id, name
+
+После того как решите задачу, посмотрите сколько было изначально строк в каждой таблице и сравните с тем, сколько их получилось после объединения.
+Ваше решение:
+
+SELECT user_id,
+       name
+FROM   (SELECT user_id
+        FROM   users limit 100) t cross join products
+ORDER BY user_id, name
+
+
+Вариант верного решения:
+
+SELECT user_id,
+       name
+FROM   (SELECT user_id
+        FROM   users limit 100) t1 cross join (SELECT name
+                                       FROM   products) t2
+ORDER BY user_id, name
